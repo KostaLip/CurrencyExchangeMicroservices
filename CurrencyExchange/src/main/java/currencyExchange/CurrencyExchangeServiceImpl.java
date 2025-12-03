@@ -1,12 +1,15 @@
 package currencyExchange;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
 import api.dtos.CurrencyExchangeDto;
 import api.services.CurrencyExchangeService;
+import util.exceptions.CurrencyDoesntExistException;
+import util.exceptions.NoDataFoundException;
 
 @RestController
 public class CurrencyExchangeServiceImpl implements CurrencyExchangeService {
@@ -17,13 +20,41 @@ public class CurrencyExchangeServiceImpl implements CurrencyExchangeService {
 	@Override
 	public ResponseEntity<?> getCurrencyExchange(String from, String to) {
 		
+		String missingCurrency = null;
+		List<String> validCurrencies = repo.findAllDistinctCurrencies();
+		
+		if (!isValidCurrency(from)) {
+			missingCurrency = from;
+		} else if (!isValidCurrency(to)) {
+			missingCurrency = to;
+		}
+		
+		if(missingCurrency != null) {
+			throw new CurrencyDoesntExistException(
+					String.format("Currency %s does not exist in the database", missingCurrency),
+					validCurrencies);
+		}
+		
 		CurrencyExchangeModel dbResponse = repo.findByFromAndTo(from, to);
+		
 		if(dbResponse == null) {
-			return new ResponseEntity<String>("Unable to find exchange rate: FROM " + from + " TO " + to, HttpStatus.NOT_FOUND);
+			throw new NoDataFoundException(
+					String.format("Requested exchange rate from: [%s to %s] does not exist", from, to),
+					validCurrencies);
 		}
 		CurrencyExchangeDto dto = new CurrencyExchangeDto(dbResponse.getFrom(),dbResponse.getTo(),dbResponse.getExchangeRate());
 		return ResponseEntity.ok(dto);
 		
+	}
+	
+	public boolean isValidCurrency(String currency) {
+		List<String> currencies = repo.findAllDistinctCurrencies();
+		for (String s: currencies) {
+			if (s.equalsIgnoreCase(currency)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 }
