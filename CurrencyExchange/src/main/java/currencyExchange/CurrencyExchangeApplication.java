@@ -5,7 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootApplication
-@ComponentScan(basePackages = {"util.exceptions", "currencyExchange"})
+@ComponentScan(basePackages = {"util.exceptions", "currencyExchange", "api.services"})
 public class CurrencyExchangeApplication {
 
 	public static void main(String[] args) {

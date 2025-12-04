@@ -7,6 +7,7 @@ public class CurrencyExchangeDto {
 	private String from;
 	private String to;
 	private BigDecimal exchangeRate;
+	private String port;
 	
 	public CurrencyExchangeDto() {
 		
@@ -40,6 +41,14 @@ public class CurrencyExchangeDto {
 	
 	public void setExchangeRate(BigDecimal exchangeRate) {
 		this.exchangeRate = exchangeRate;
+	}
+
+	public String getPort() {
+		return port;
+	}
+
+	public void setPort(String port) {
+		this.port = port;
 	}
 	
 }
