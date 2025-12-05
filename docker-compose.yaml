@@ -1,0 +1,62 @@
+version: '3.7'
+
+services:
+  currency-exchange:
+    image: kostalip/currency-exchange:1.0.0
+    mem_limit: 700m
+    ports:
+      - "8000:8000"
+    networks:
+      - currency-network
+    depends_on:
+      - naming-server
+    environment:
+      EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE: http://naming-server:8761/eureka
+
+  currency-conversion:
+    image: kostalip/currency-conversion:1.0.0
+    mem_limit: 700m
+    ports:
+      - "8100:8100"
+    networks:
+      - currency-network
+    depends_on:
+      - naming-server
+    environment:
+      EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE: http://naming-server:8761/eureka
+
+  user-service:
+    image: kostalip/user-service:1.0.0
+    mem_limit: 700m
+    ports:
+      - "8770:8770"
+    networks:
+      - currency-network
+    depends_on:
+      - naming-server
+    environment:
+      EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE: http://naming-server:8761/eureka    
+
+  api-gateway:
+    image: kostalip/api-gateway:1.0.0
+    mem_limit: 700m
+    ports:
+      - "8765:8765"
+    networks:
+      - currency-network
+    depends_on:
+      - naming-server
+      - user-service
+    environment:
+      EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE: http://naming-server:8761/eureka
+
+  naming-server:
+    image: kostalip/naming-server:1.0.0
+    mem_limit: 700m
+    ports:
+      - "8761:8761"
+    networks:
+      - currency-network        
+ 
+networks:
+  currency-network:
