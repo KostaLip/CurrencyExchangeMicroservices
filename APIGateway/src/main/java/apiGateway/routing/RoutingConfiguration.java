@@ -14,7 +14,9 @@ public class RoutingConfiguration {
 				.route(p -> p.path("/currency-exchange").uri("lb://currency-exchange"))
 				.route(p -> p.path("/currency-conversion-feign").uri("lb://currency-conversion"))
 				.route(p -> p.path("/currency-conversion").filters(f -> f.rewritePath("/currency-conversion", "/currency-conversion-feign"))
-						.uri("lb://currency-conversion")).build();
+						.uri("lb://currency-conversion"))
+				.route(p -> p.path("/users/**").uri("lb://user-service"))
+				.build();
 	}
 	
 }
