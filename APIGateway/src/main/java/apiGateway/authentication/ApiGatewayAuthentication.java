@@ -30,6 +30,10 @@ public class ApiGatewayAuthentication {
 				.pathMatchers(HttpMethod.POST, "/users/**").hasRole("OWNER")
 				.pathMatchers(HttpMethod.PUT, "/users/**").hasAnyRole("ADMIN", "OWNER")
 				.pathMatchers(HttpMethod.DELETE, "/users/**").hasRole("OWNER")
+				
+				.pathMatchers(HttpMethod.GET, "/bankAccounts").hasRole("ADMIN")
+				.pathMatchers(HttpMethod.GET, "/bankAccounts/email").hasAnyRole("ADMIN", "USER")
+				.pathMatchers(HttpMethod.PUT, "/bankAccounts").hasRole("ADMIN")
 				).httpBasic(Customizer.withDefaults());
 		
 		return http.build();

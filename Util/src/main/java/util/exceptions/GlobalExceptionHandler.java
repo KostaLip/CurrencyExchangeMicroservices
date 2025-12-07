@@ -20,8 +20,23 @@ public class GlobalExceptionHandler {
 	
 	@ExceptionHandler(DataIntegrityViolationException.class)
 	public ResponseEntity<?> handleRoleException(DataIntegrityViolationException e) {
-		return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
 				new ExceptionModel("Invalid role specified", "Role must be one of: USER, ADMIN, OWNER",
+						HttpStatus.BAD_REQUEST));
+	}
+	
+	@ExceptionHandler(AdminCreateNonUserBankAccountException.class)
+	public ResponseEntity<?> handleRoleException(AdminCreateNonUserBankAccountException e) {
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+				new ExceptionModel("ADMIN users can only create bank accounts for USER users", 
+						"You must enter USER users email",
+						HttpStatus.BAD_REQUEST));
+	}
+	
+	@ExceptionHandler(UserGetBankAccountEmailException.class)
+	public ResponseEntity<?> handleUserGetBankAccountEmailException(UserGetBankAccountEmailException e){
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+				new ExceptionModel(e.getMessage(), "You must enter your USER email",
 						HttpStatus.BAD_REQUEST));
 	}
 	

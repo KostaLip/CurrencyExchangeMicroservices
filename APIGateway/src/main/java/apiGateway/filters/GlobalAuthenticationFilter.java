@@ -32,7 +32,7 @@ public class GlobalAuthenticationFilter implements WebFilter {
                         }
 
                         var mutatedRequest = exchange.getRequest().mutate()
-                                .header("X-Auth-Username", username)
+                                .header("X-Auth-Email", username)
                                 .header("X-Auth-Role", role)
                                 .build();
                         

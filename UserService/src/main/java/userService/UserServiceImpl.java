@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
 import api.dtos.UserDto;
+import api.proxies.BankAccountProxy;
 import api.services.UserService;
 import util.exceptions.AdminUpdateException;
 
@@ -17,6 +18,9 @@ public class UserServiceImpl implements UserService {
 
 	@Autowired
 	private UserRepository repo;
+	
+	@Autowired
+	private BankAccountProxy proxy;
 	
 	@Override
 	public List<UserDto> getUsers(String role) {
@@ -60,6 +64,7 @@ public class UserServiceImpl implements UserService {
 		if(repo.findByEmail(dto.getEmail()) == null) {
 			dto.setRole("USER");
 			UserModel model = converUserDtoToModel(dto);
+			proxy.createBankAccount(model.getEmail());
 			return ResponseEntity.status(HttpStatus.CREATED).body(repo.save(model));
 		} else {
 			return ResponseEntity.status(HttpStatus.CONFLICT).body("User with passed email already exists");
@@ -77,6 +82,9 @@ public class UserServiceImpl implements UserService {
 		}
 		if(role.equalsIgnoreCase("ADMIN") && dto.getRole().equalsIgnoreCase("OWNER")) {
 			return ResponseEntity.status(HttpStatus.CONFLICT).body("There is already OWNER user. System can have only one OWNER user");
+		}
+		if(role.equalsIgnoreCase("ADMIN") && dto.getRole().equalsIgnoreCase("ADMIN") && user.getRole().equalsIgnoreCase("USER")) {
+			return ResponseEntity.status(HttpStatus.CONFLICT).body("You can not promote USER user to ADMIN user");
 		}
 		if(role.equalsIgnoreCase("OWNER")) {
 			if(user.getRole().equalsIgnoreCase("OWNER") && !dto.getRole().equalsIgnoreCase("OWNER")) {
@@ -97,6 +105,7 @@ public class UserServiceImpl implements UserService {
 				return ResponseEntity.status(HttpStatus.CONFLICT).body("You can not delete OWNER user. Because system can have only one OWNER user");
 			}
 			repo.delete(user);
+			proxy.deleteBankAccount(email);
 			return ResponseEntity.status(HttpStatus.OK).body(String.format(
 					"User with email: %s, has been successfully deleted", email));
 		} else {
