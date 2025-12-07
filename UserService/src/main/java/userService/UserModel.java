@@ -16,7 +16,7 @@ public class UserModel implements Serializable{
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "my_seq")
-	@SequenceGenerator(name = "my_seq", sequenceName = "my_seq", allocationSize = 1, initialValue = 3)
+	@SequenceGenerator(name = "my_seq", sequenceName = "my_seq", allocationSize = 1, initialValue = 4)
 	private int id;
 	
 	@Column(nullable = false, unique = true)
@@ -25,7 +25,7 @@ public class UserModel implements Serializable{
 	@Column(nullable = false)
 	private String password;
 	
-	@Column(nullable = false, columnDefinition = "VARCHAR(10) CHECK(role in ('ADMIN', 'USER'))")
+	@Column(nullable = false, columnDefinition = "VARCHAR(10) CHECK(role in ('ADMIN', 'USER', 'OWNER'))")
 	private String role;
 	
 	public UserModel() {

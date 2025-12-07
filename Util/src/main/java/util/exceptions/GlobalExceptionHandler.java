@@ -6,6 +6,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.dao.DataIntegrityViolationException;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
@@ -17,11 +18,25 @@ public class GlobalExceptionHandler {
 						fineTuneMessage(e.getMessage()), "Requested currencies not found", HttpStatus.NOT_FOUND));
 	}
 	
+	@ExceptionHandler(DataIntegrityViolationException.class)
+	public ResponseEntity<?> handleRoleException(DataIntegrityViolationException e) {
+		return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+				new ExceptionModel("Invalid role specified", "Role must be one of: USER, ADMIN, OWNER",
+						HttpStatus.BAD_REQUEST));
+	}
+	
 	@ExceptionHandler(MissingServletRequestParameterException.class)
 	public ResponseEntity<?> handleMissingRequestParam(MissingServletRequestParameterException e) {
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
 				new ExceptionModel(
 						e.getMessage(), "Make sure to enter all request parameters", HttpStatus.BAD_REQUEST));
+	}
+	
+	@ExceptionHandler(AdminUpdateException.class)
+	public ResponseEntity<?> handleAdminUpdateException(AdminUpdateException e) {
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+				new ExceptionModel(
+						e.getMessage(), "Update user with USER role", HttpStatus.BAD_REQUEST));
 	}
 	
 	@ExceptionHandler(NoDataFoundException.class)

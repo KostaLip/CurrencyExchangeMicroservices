@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import api.dtos.UserDto;
 import api.services.UserService;
+import util.exceptions.AdminUpdateException;
 
 @RestController
 public class UserServiceImpl implements UserService {
@@ -18,13 +19,24 @@ public class UserServiceImpl implements UserService {
 	private UserRepository repo;
 	
 	@Override
-	public List<UserDto> getUsers() {
+	public List<UserDto> getUsers(String role) {
 		List<UserModel> models = repo.findAll();
 		List<UserDto> dtos = new ArrayList<UserDto>();
-		for(UserModel model : models) {
-			dtos.add(convertUserModelToDto(model));
+		if(role.equalsIgnoreCase("OWNER")) {
+			for(UserModel model : models) {
+				dtos.add(convertUserModelToDto(model));
+			}
+			return dtos;
+		} else if(role.equalsIgnoreCase("ADMIN")) {
+			for(UserModel model : models) {
+				if(model.getRole().equalsIgnoreCase("USER")) {
+					dtos.add(convertUserModelToDto(model));
+				}
+			}
+			return dtos;
 		}
-		return dtos;
+		return null;
+		
 	}
 
 	@Override
@@ -55,10 +67,38 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
-	public ResponseEntity<?> updateUser(UserDto dto) {
-		if(repo.findByEmail(dto.getEmail()) != null) {
-			repo.updateUser(dto.getEmail(), dto.getPassword(), dto.getRole());
-			return ResponseEntity.status(HttpStatus.OK).body(dto);
+	public ResponseEntity<?> updateUser(UserDto dto, String role) {
+		UserModel user = repo.findByEmail(dto.getEmail());
+		if(user == null) {
+			return ResponseEntity.status(HttpStatus.CONFLICT).body("User with passed email does not exist");
+		}
+		if(role.equalsIgnoreCase("ADMIN") && !user.getRole().equalsIgnoreCase("USER")) {
+			throw new AdminUpdateException("ADMIN users can not update non USER users");
+		}
+		if(role.equalsIgnoreCase("ADMIN") && dto.getRole().equalsIgnoreCase("OWNER")) {
+			return ResponseEntity.status(HttpStatus.CONFLICT).body("There is already OWNER user. System can have only one OWNER user");
+		}
+		if(role.equalsIgnoreCase("OWNER")) {
+			if(user.getRole().equalsIgnoreCase("OWNER") && !dto.getRole().equalsIgnoreCase("OWNER")) {
+				return ResponseEntity.status(HttpStatus.CONFLICT).body("You can not chane role of OWNER user. System can have only one OWNER user");
+			} else if(!user.getRole().equalsIgnoreCase("OWNER") && dto.getRole().equalsIgnoreCase("OWNER")) {
+				return ResponseEntity.status(HttpStatus.CONFLICT).body("There is already OWNER user. System can have only one OWNER user");
+			}
+		}
+		repo.updateUser(dto.getEmail(), dto.getPassword(), dto.getRole());
+		return ResponseEntity.status(HttpStatus.OK).body(dto);
+	}
+	
+	@Override
+	public ResponseEntity<?> deleteUser(String email) {
+		UserModel user = repo.findByEmail(email);
+		if(user != null) {
+			if(user.getRole().equalsIgnoreCase("OWNER")) {
+				return ResponseEntity.status(HttpStatus.CONFLICT).body("You can not delete OWNER user. Because system can have only one OWNER user");
+			}
+			repo.delete(user);
+			return ResponseEntity.status(HttpStatus.OK).body(String.format(
+					"User with email: %s, has been successfully deleted", email));
 		} else {
 			return ResponseEntity.status(HttpStatus.CONFLICT).body("User with passed email does not exist");
 		}

@@ -23,10 +23,13 @@ public class ApiGatewayAuthentication {
 		http
 		.csrf(csrf -> csrf.disable())
 		.authorizeExchange(exchange -> exchange
-				.pathMatchers(HttpMethod.POST).hasRole("ADMIN")
 				.pathMatchers("/currency-exchange").permitAll()
 				.pathMatchers("/currency-conversion").hasRole("USER")
-				.pathMatchers("/users").hasRole("ADMIN")
+				.pathMatchers(HttpMethod.GET,"/users").hasAnyRole("ADMIN", "OWNER")
+				.pathMatchers(HttpMethod.POST, "/users/newUser").hasAnyRole("ADMIN", "OWNER")
+				.pathMatchers(HttpMethod.POST, "/users/**").hasRole("OWNER")
+				.pathMatchers(HttpMethod.PUT, "/users/**").hasAnyRole("ADMIN", "OWNER")
+				.pathMatchers(HttpMethod.DELETE, "/users/**").hasRole("OWNER")
 				).httpBasic(Customizer.withDefaults());
 		
 		return http.build();
@@ -34,9 +37,9 @@ public class ApiGatewayAuthentication {
 	
 	@Bean
 	ReactiveUserDetailsService reactiveUserDetailsService(WebClient.Builder webClientBuilder, BCryptPasswordEncoder encoder) {
-		//WebClient client = webClientBuilder.baseUrl("http://localhost:8770").build();
+		WebClient client = webClientBuilder.baseUrl("http://localhost:8770").build();
 		
-		WebClient client = webClientBuilder.baseUrl("http://user-service:8770").build();
+		//WebClient client = webClientBuilder.baseUrl("http://user-service:8770").build();
 		
 		return user -> client.get()
 				.uri(uriBuilder -> uriBuilder
