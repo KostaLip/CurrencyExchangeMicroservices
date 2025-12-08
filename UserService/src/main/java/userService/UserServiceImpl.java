@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import api.dtos.UserDto;
 import api.proxies.BankAccountProxy;
+import api.proxies.CryptoWalletProxy;
 import api.services.UserService;
 import util.exceptions.AdminUpdateException;
 
@@ -21,6 +22,9 @@ public class UserServiceImpl implements UserService {
 	
 	@Autowired
 	private BankAccountProxy proxy;
+	
+	@Autowired
+	private CryptoWalletProxy cryptoWallet;
 	
 	@Override
 	public List<UserDto> getUsers(String role) {
@@ -65,6 +69,7 @@ public class UserServiceImpl implements UserService {
 			dto.setRole("USER");
 			UserModel model = converUserDtoToModel(dto);
 			proxy.createBankAccount(model.getEmail());
+			cryptoWallet.createCryptoWallet(model.getEmail());
 			return ResponseEntity.status(HttpStatus.CREATED).body(repo.save(model));
 		} else {
 			return ResponseEntity.status(HttpStatus.CONFLICT).body("User with passed email already exists");
@@ -94,6 +99,7 @@ public class UserServiceImpl implements UserService {
 			}
 		}
 		repo.updateUser(dto.getEmail(), dto.getPassword(), dto.getRole());
+		//proxy.updateEmailBankAccount(role, role);
 		return ResponseEntity.status(HttpStatus.OK).body(dto);
 	}
 	
@@ -106,6 +112,7 @@ public class UserServiceImpl implements UserService {
 			}
 			repo.delete(user);
 			proxy.deleteBankAccount(email);
+			cryptoWallet.deleteCryptoWallet(email);
 			return ResponseEntity.status(HttpStatus.OK).body(String.format(
 					"User with email: %s, has been successfully deleted", email));
 		} else {

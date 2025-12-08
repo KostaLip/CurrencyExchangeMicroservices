@@ -44,7 +44,7 @@ public class CurrencyConversionDto {
 		this.conversionResault = conversionResault;
 	}
 
-	private class ConversionResault {
+	public class ConversionResault {
 		private String to;
 		private BigDecimal convertedAmount;
 				

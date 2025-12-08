@@ -74,9 +74,21 @@ public class BankAccountServiceImpl implements BankAccountService{
 		            "Bank Account with email: %s, has been successfully deleted", email)));
 	}
 	
+	/*@Override
+	public ResponseEntity<?> updateEmailBankAccount(String oldEmail, String newEmail) {
+		repo.updateEmailBankAccoutn(oldEmail, newEmail);
+		return ResponseEntity.status(HttpStatus.OK).body("Bank account email updated");
+	}*/
+	
 	private BankAccountDto convertFromModelToDto(BankAccountModel model) {
 		return new BankAccountDto(model.getEmail(), model.getUsdAmount(), model.getEurAmount(),
 				model.getRsdAmount(), model.getGbpAmount(), model.getChfAmount());
 	}
+
+	@Override
+	public BankAccountDto getBankAccount(String email) {
+		return convertFromModelToDto(repo.findByEmail(email));
+	}
+	
 
 }

@@ -23,8 +23,10 @@ public class ApiGatewayAuthentication {
 		http
 		.csrf(csrf -> csrf.disable())
 		.authorizeExchange(exchange -> exchange
-				.pathMatchers("/currency-exchange").permitAll()
-				.pathMatchers("/currency-conversion").hasRole("USER")
+				.pathMatchers("/currency-exchange").hasAnyRole("USER", "ADMIN", "OWNER")
+				.pathMatchers("/crypto-exchange").hasAnyRole("USER", "ADMIN", "OWNER")
+				.pathMatchers("/currency-conversion-feign").hasRole("USER")
+				
 				.pathMatchers(HttpMethod.GET,"/users").hasAnyRole("ADMIN", "OWNER")
 				.pathMatchers(HttpMethod.POST, "/users/newUser").hasAnyRole("ADMIN", "OWNER")
 				.pathMatchers(HttpMethod.POST, "/users/**").hasRole("OWNER")
@@ -34,6 +36,10 @@ public class ApiGatewayAuthentication {
 				.pathMatchers(HttpMethod.GET, "/bankAccounts").hasRole("ADMIN")
 				.pathMatchers(HttpMethod.GET, "/bankAccounts/email").hasAnyRole("ADMIN", "USER")
 				.pathMatchers(HttpMethod.PUT, "/bankAccounts").hasRole("ADMIN")
+				
+				.pathMatchers(HttpMethod.GET, "/crypto-wallet").hasRole("ADMIN")
+				.pathMatchers(HttpMethod.GET, "/crypto-wallet/email").hasAnyRole("ADMIN", "USER")
+				.pathMatchers(HttpMethod.PUT, "/crypto-wallet").hasRole("ADMIN")
 				).httpBasic(Customizer.withDefaults());
 		
 		return http.build();

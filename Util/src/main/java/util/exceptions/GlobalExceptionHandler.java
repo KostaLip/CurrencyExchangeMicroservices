@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.ExampleMatcher.StringMatcher;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
@@ -25,6 +26,13 @@ public class GlobalExceptionHandler {
 						HttpStatus.BAD_REQUEST));
 	}
 	
+	@ExceptionHandler(CurrencyAmountException.class)
+	public ResponseEntity<?> handleCurrencyAmountException(CurrencyAmountException e) {
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+				new ExceptionModel(e.getMessage(), String.format("YOU HAVE: %s %s", e.getCurrency(), e.getAmount()),
+						HttpStatus.BAD_REQUEST));
+	}
+	
 	@ExceptionHandler(AdminCreateNonUserBankAccountException.class)
 	public ResponseEntity<?> handleRoleException(AdminCreateNonUserBankAccountException e) {
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
@@ -35,6 +43,13 @@ public class GlobalExceptionHandler {
 	
 	@ExceptionHandler(UserGetBankAccountEmailException.class)
 	public ResponseEntity<?> handleUserGetBankAccountEmailException(UserGetBankAccountEmailException e){
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+				new ExceptionModel(e.getMessage(), "You must enter your USER email",
+						HttpStatus.BAD_REQUEST));
+	}
+	
+	@ExceptionHandler(UserGetCryptoWalletEmailException.class)
+	public ResponseEntity<?> handleUserGetCryptoWalletEmailException(UserGetCryptoWalletEmailException e){
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
 				new ExceptionModel(e.getMessage(), "You must enter your USER email",
 						HttpStatus.BAD_REQUEST));
@@ -68,6 +83,14 @@ public class GlobalExceptionHandler {
 				new ExceptionModel(
 						e.getMessage(), String.format("Please make sure to enter currency from the list: %s",
 								e.getCurrencies()), HttpStatus.NOT_FOUND));
+	}
+	
+	@ExceptionHandler(CryptoDoesNotExistException.class)
+	public ResponseEntity<?> handleInvalidCrypto(CryptoDoesNotExistException e) {
+		return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+				new ExceptionModel(
+						e.getMessage(), String.format("Please make sure to enter crypto from the list: %s",
+								e.getCryptos()), HttpStatus.NOT_FOUND));
 	}
 	
 	@ExceptionHandler(InvalidQuantityException.class)

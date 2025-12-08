@@ -21,4 +21,7 @@ public interface BankAccountRepository extends JpaRepository<BankAccountModel, I
 	void updateBankAccount(String email, BigDecimal usdAmount, BigDecimal eurAmount, BigDecimal rsdAmount,
 			BigDecimal gbpAmount, BigDecimal chfAmount);
 	
+	@Query("update BankAccountModel u set u.email = ?2 where u.email = ?1")
+	void updateEmailBankAccoutn(String oldEmail, String newEmail);
+	
 }

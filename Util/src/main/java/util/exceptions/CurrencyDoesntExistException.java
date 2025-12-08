@@ -1,5 +1,6 @@
 package util.exceptions;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class CurrencyDoesntExistException extends RuntimeException {
@@ -10,6 +11,16 @@ public class CurrencyDoesntExistException extends RuntimeException {
 	
 	public CurrencyDoesntExistException() {
 		
+	}
+	
+	public CurrencyDoesntExistException(String message) {
+		super(message);
+		this.currencies = new ArrayList<String>();
+		currencies.add("USD");
+		currencies.add("EUR");
+		currencies.add("RSD");
+		currencies.add("GBP");
+		currencies.add("CHF");
 	}
 	
 	public CurrencyDoesntExistException(String message, List<String> currencies) {
