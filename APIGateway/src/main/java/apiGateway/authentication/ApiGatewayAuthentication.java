@@ -25,8 +25,12 @@ public class ApiGatewayAuthentication {
 		.authorizeExchange(exchange -> exchange
 				.pathMatchers("/currency-exchange").hasAnyRole("USER", "ADMIN", "OWNER")
 				.pathMatchers("/crypto-exchange").hasAnyRole("USER", "ADMIN", "OWNER")
-				.pathMatchers("/currency-conversion-feign").hasRole("USER")
 				
+				.pathMatchers("/currency-conversion-feign").hasRole("USER")
+				.pathMatchers("/crypto-conversion-feign").hasRole("USER")
+				.pathMatchers("/trade/**").hasRole("USER")
+				
+				.pathMatchers(HttpMethod.GET,"/users/email").hasRole("OWNER")
 				.pathMatchers(HttpMethod.GET,"/users").hasAnyRole("ADMIN", "OWNER")
 				.pathMatchers(HttpMethod.POST, "/users/newUser").hasAnyRole("ADMIN", "OWNER")
 				.pathMatchers(HttpMethod.POST, "/users/**").hasRole("OWNER")

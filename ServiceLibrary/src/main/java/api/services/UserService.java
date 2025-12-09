@@ -21,7 +21,7 @@ public interface UserService {
 	List<UserDto> getUsers(@RequestHeader(value = "X-Auth-Role") String role);
 	
 	@GetMapping("/users/email")
-	UserDto getUserByEmail(@RequestParam String email);
+	ResponseEntity<?> getUserByEmail(@RequestParam String email);
 	
 	@PostMapping("/users/newAdmin")
 	ResponseEntity<?> createAdmin(@RequestBody UserDto dto);

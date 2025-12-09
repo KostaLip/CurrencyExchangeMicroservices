@@ -26,10 +26,24 @@ public class GlobalExceptionHandler {
 						HttpStatus.BAD_REQUEST));
 	}
 	
+	@ExceptionHandler(TradeCombinationException.class)
+	public ResponseEntity<?> handleTradeCompinationException(TradeCombinationException e) {
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+				new ExceptionModel(e.getMessage(), "Enter valid currency: USD, EUR, RSD, GBP, CHF. Enter valid crypto: BTC, ETH, SOL",
+						HttpStatus.BAD_REQUEST));
+	}
+	
 	@ExceptionHandler(CurrencyAmountException.class)
 	public ResponseEntity<?> handleCurrencyAmountException(CurrencyAmountException e) {
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
 				new ExceptionModel(e.getMessage(), String.format("YOU HAVE: %s %s", e.getCurrency(), e.getAmount()),
+						HttpStatus.BAD_REQUEST));
+	}
+	
+	@ExceptionHandler(CryptoAmountException.class)
+	public ResponseEntity<?> handleCryptoAmountException(CryptoAmountException e) {
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+				new ExceptionModel(e.getMessage(), String.format("YOU HAVE: %s %s", e.getCrypto(), e.getAmount()),
 						HttpStatus.BAD_REQUEST));
 	}
 	

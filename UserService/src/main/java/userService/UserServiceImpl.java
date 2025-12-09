@@ -48,8 +48,11 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
-	public UserDto getUserByEmail(String email) {
-		return convertUserModelToDto(repo.findByEmail(email));
+	public ResponseEntity<?> getUserByEmail(String email) {
+		if(repo.findByEmail(email) == null) {
+			return ResponseEntity.status(HttpStatus.CONFLICT).body("User with passed email does not exist");
+		}
+		return ResponseEntity.status(HttpStatus.OK).body(repo.findByEmail(email));
 	}
 
 	@Override

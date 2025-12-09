@@ -49,6 +49,9 @@ public class CurrencyConversionServiceImpl implements CurrencyConversionService{
 
 	@Override
 	public ResponseEntity<?> getConversionFeign(String from, String to, BigDecimal quantity, String email) {
+		if (quantity.compareTo(BigDecimal.ZERO) < 0) {
+			throw new InvalidQuantityException("Quantity can not be negative number");
+		}
 		if(from.equalsIgnoreCase(to)) {
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Currencies must be different");
 		}
