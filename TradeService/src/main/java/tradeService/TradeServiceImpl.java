@@ -67,8 +67,34 @@ public class TradeServiceImpl implements TradeService{
 		if(to.equalsIgnoreCase("USD") || to.equalsIgnoreCase("EUR")) {
 			return tradeCryptoUsdEur(from, to, quantity, bankAccount, cryptoWallet);
 		} else {
-			
+			BigDecimal currentCurrencyAmount = getCurrencyAmount(to, bankAccount);
+			tradeCryptoToNonUsdEur(from, "USD", quantity, bankAccount, cryptoWallet);
+			return tradeCurrencies("USD", to, quantity, currentCurrencyAmount, bankAccount);
 		}
+	}
+	
+	private ResponseEntity<?> tradeCurrencies(String from, String to, BigDecimal quantity, BigDecimal oldAmount, BankAccountDto bankAccount) {
+		BigDecimal exchangeRate = currencyProxy.getExchangeFeign(from, to).getBody().getExchangeRate();
+		
+		setCurrencyAmount(to, bankAccount, getCurrencyAmount(from, bankAccount).subtract(oldAmount).multiply(exchangeRate));
+		setCurrencyAmount(from, bankAccount, oldAmount);
+		
+		Map<String, Object> backResponse = new HashMap<>();
+		backResponse.put("message", "Conversion successful! " + from + ": " + quantity + " -> " + to + " " + quantity.multiply(exchangeRate));
+		backResponse.put("data", bankAccount);
+		return ResponseEntity.status(HttpStatus.OK).body(backResponse);
+	}
+	
+	private void tradeCryptoToNonUsdEur(String from, String to, BigDecimal quantity, BankAccountDto bankAccount, CryptoWalletDto cryptoWallet) {
+		BigDecimal currentCurrencyAmount = getCurrencyAmount(to, bankAccount);
+		BigDecimal currentCryptoAmount = getCryptoAmount(from, cryptoWallet);
+		BigDecimal exchangeRate = repo.findByFromAndTo(from, to).getExchangeRate();
+		
+		setCryptoAmount(from, cryptoWallet, currentCryptoAmount.subtract(quantity));
+		walletProxy.updateCryptoWallet(cryptoWallet);
+		
+		setCurrencyAmount(to, bankAccount, currentCurrencyAmount.add(quantity.multiply(exchangeRate)));
+		bankProxy.updateBankAccount(bankAccount);
 	}
 	
 	private ResponseEntity<?> tradeCryptoUsdEur(String from, String to, BigDecimal quantity, BankAccountDto bankAccount, CryptoWalletDto cryptoWallet) {
@@ -123,26 +149,27 @@ public class TradeServiceImpl implements TradeService{
 		walletProxy.updateCryptoWallet(cryptoWallet);
 		
 		Map<String, Object> backResponse = new HashMap<>();
-		backResponse.put("message", "Conversion successful! " + from + ": " + quantity + " -> " + to + " " + quantity.multiply(exchangeRate));
 		backResponse.put("data", cryptoWallet);
+		backResponse.put("message", "Conversion successful! " + from + ": " + quantity + " -> " + to + " " + quantity.multiply(exchangeRate));
+		//backResponse.put("message", "Conversion successful! " + from + ": " + quantity + " -> " + to + " " + currentCryptoAmount);
 		return ResponseEntity.status(HttpStatus.OK).body(backResponse);
 	}
 	
 	private void setCryptoAmount(String crypto, CryptoWalletDto wallet, BigDecimal quantity) {
 		switch(crypto) {
-		case "BTC": wallet.setBtcAmount(quantity);
-		case "ETH": wallet.setEthAmount(quantity);
-		case "SOL": wallet.setSolAmount(quantity);
+		case "BTC": wallet.setBtcAmount(quantity); break;
+		case "ETH": wallet.setEthAmount(quantity); break;
+		case "SOL": wallet.setSolAmount(quantity); break;
 		}
 	}
 	
 	private void setCurrencyAmount(String currency, BankAccountDto account, BigDecimal quantity) {
 		switch(currency) {
-		case "USD": account.setUsdAmount(quantity);
-		case "EUR": account.setEurAmount(quantity);
-		case "RSD": account.setRsdAmount(quantity);
-		case "GBP": account.setGbpAmount(quantity);
-		case "CHF": account.setChfAmount(quantity);
+		case "USD": account.setUsdAmount(quantity); break;
+		case "EUR": account.setEurAmount(quantity); break;
+		case "RSD": account.setRsdAmount(quantity); break;
+		case "GBP": account.setGbpAmount(quantity); break;
+		case "CHF": account.setChfAmount(quantity); break;
 		}
 	}
 	

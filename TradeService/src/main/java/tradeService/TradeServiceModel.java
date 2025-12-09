@@ -23,6 +23,7 @@ public class TradeServiceModel implements Serializable{
 	@Column(name = "currency_to")
 	private String to;
 	
+	@Column(precision=19, scale=8)
 	private BigDecimal exchangeRate;
 
 	public TradeServiceModel() {
