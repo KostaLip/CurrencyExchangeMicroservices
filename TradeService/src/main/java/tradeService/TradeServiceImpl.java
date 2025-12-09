@@ -71,8 +71,6 @@ public class TradeServiceImpl implements TradeService{
 		}
 	}
 	
-	private void 
-	
 	private ResponseEntity<?> tradeCryptoUsdEur(String from, String to, BigDecimal quantity, BankAccountDto bankAccount, CryptoWalletDto cryptoWallet) {
 		BigDecimal currentCurrencyAmount = getCurrencyAmount(to, bankAccount);
 		BigDecimal currentCryptoAmount = getCryptoAmount(from, cryptoWallet);
@@ -102,7 +100,7 @@ public class TradeServiceImpl implements TradeService{
 			return tradeUsdEurCrypto(from, to, quantity, bankAccount, cryptoWallet);
 		} else {
 			tradeNotUsdEur(from, bankAccount, currentCurrencyAmount, quantity);
-			return tradeUsdEurCrypto(from, to, quantity, bankAccount, cryptoWallet);
+			return tradeUsdEurCrypto("USD", to, quantity, bankAccount, cryptoWallet);
 		}
 	}
 	
