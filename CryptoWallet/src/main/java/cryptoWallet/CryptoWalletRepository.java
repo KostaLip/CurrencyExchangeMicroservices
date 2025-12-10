@@ -14,7 +14,7 @@ public interface CryptoWalletRepository extends JpaRepository<CryptoWalletModel,
 
 	CryptoWalletModel findByEmail(String email);
 	
-	@Modifying
+	@Modifying(clearAutomatically = true)
 	@Transactional
 	@Query("update CryptoWalletModel u set u.btcAmount = ?2, u.ethAmount = ?3, u.solAmount = ?4 where u.email = ?1")
 	void updateCryptoWallet(String email, BigDecimal btcAmount, BigDecimal ethAmount, BigDecimal solAmount);

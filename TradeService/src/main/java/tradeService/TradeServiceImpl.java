@@ -11,11 +11,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
 import api.dtos.BankAccountDto;
+import api.dtos.CryptoExchangeDto;
 import api.dtos.CryptoWalletDto;
 import api.proxies.BankAccountProxy;
 import api.proxies.CryptoWalletProxy;
 import api.proxies.CurrencyExchangeProxy;
 import api.services.TradeService;
+import jakarta.transaction.Transactional;
 import util.exceptions.CryptoAmountException;
 import util.exceptions.CryptoDoesNotExistException;
 import util.exceptions.CurrencyAmountException;
@@ -38,8 +40,8 @@ public class TradeServiceImpl implements TradeService{
 	@Autowired
 	private CurrencyExchangeProxy currencyProxy;
 	
-	
 	@Override
+	@Transactional
 	public ResponseEntity<?> trade(String from, String to, BigDecimal quantity, String email) {
 		if (quantity.compareTo(BigDecimal.ZERO) < 0) {
 			throw new InvalidQuantityException("Quantity can not be negative number");
@@ -56,103 +58,110 @@ public class TradeServiceImpl implements TradeService{
 				from, to));
 	}
 	
-	private ResponseEntity<?> tradeFromCryptoToFiat(String from, String to, BigDecimal quantity, String email) {
-		BankAccountDto bankAccount = bankProxy.getBankAccount(email);
-		CryptoWalletDto cryptoWallet = walletProxy.getCryptoWallet(email);
-		BigDecimal currentCryptoAmount = getCryptoAmount(from, cryptoWallet);
-		
-		if(currentCryptoAmount.compareTo(quantity) < 0) {
-			throw new CryptoAmountException("You do not have enough crypto for trade", from, currentCryptoAmount);
-		}
-		if(to.equalsIgnoreCase("USD") || to.equalsIgnoreCase("EUR")) {
-			return tradeCryptoUsdEur(from, to, quantity, bankAccount, cryptoWallet);
-		} else {
-			BigDecimal currentCurrencyAmount = getCurrencyAmount(to, bankAccount);
-			tradeCryptoToNonUsdEur(from, "USD", quantity, bankAccount, cryptoWallet);
-			return tradeCurrencies("USD", to, quantity, currentCurrencyAmount, bankAccount);
-		}
-	}
-	
-	private ResponseEntity<?> tradeCurrencies(String from, String to, BigDecimal quantity, BigDecimal oldAmount, BankAccountDto bankAccount) {
-		BigDecimal exchangeRate = currencyProxy.getExchangeFeign(from, to).getBody().getExchangeRate();
-		
-		setCurrencyAmount(to, bankAccount, getCurrencyAmount(from, bankAccount).subtract(oldAmount).multiply(exchangeRate));
-		setCurrencyAmount(from, bankAccount, oldAmount);
-		
-		Map<String, Object> backResponse = new HashMap<>();
-		backResponse.put("message", "Conversion successful! " + from + ": " + quantity + " -> " + to + " " + quantity.multiply(exchangeRate));
-		backResponse.put("data", bankAccount);
-		return ResponseEntity.status(HttpStatus.OK).body(backResponse);
-	}
-	
-	private void tradeCryptoToNonUsdEur(String from, String to, BigDecimal quantity, BankAccountDto bankAccount, CryptoWalletDto cryptoWallet) {
-		BigDecimal currentCurrencyAmount = getCurrencyAmount(to, bankAccount);
-		BigDecimal currentCryptoAmount = getCryptoAmount(from, cryptoWallet);
-		BigDecimal exchangeRate = repo.findByFromAndTo(from, to).getExchangeRate();
-		
-		setCryptoAmount(from, cryptoWallet, currentCryptoAmount.subtract(quantity));
-		walletProxy.updateCryptoWallet(cryptoWallet);
-		
-		setCurrencyAmount(to, bankAccount, currentCurrencyAmount.add(quantity.multiply(exchangeRate)));
-		bankProxy.updateBankAccount(bankAccount);
-	}
-	
-	private ResponseEntity<?> tradeCryptoUsdEur(String from, String to, BigDecimal quantity, BankAccountDto bankAccount, CryptoWalletDto cryptoWallet) {
-		BigDecimal currentCurrencyAmount = getCurrencyAmount(to, bankAccount);
-		BigDecimal currentCryptoAmount = getCryptoAmount(from, cryptoWallet);
-		BigDecimal exchangeRate = repo.findByFromAndTo(from, to).getExchangeRate();
-		
-		setCryptoAmount(from, cryptoWallet, currentCryptoAmount.subtract(quantity));
-		walletProxy.updateCryptoWallet(cryptoWallet);
-		
-		setCurrencyAmount(to, bankAccount, currentCurrencyAmount.add(quantity.multiply(exchangeRate)));
-		bankProxy.updateBankAccount(bankAccount);
-		
-		Map<String, Object> backResponse = new HashMap<>();
-		backResponse.put("message", "Conversion successful! " + from + ": " + quantity + " -> " + to + " " + quantity.multiply(exchangeRate));
-		backResponse.put("data", bankAccount);
-		return ResponseEntity.status(HttpStatus.OK).body(backResponse);
-	}
-	
 	private ResponseEntity<?> tradeFromFiatToCrypto(String from, String to, BigDecimal quantity, String email) {
 		BankAccountDto bankAccount = bankProxy.getBankAccount(email);
 		CryptoWalletDto cryptoWallet = walletProxy.getCryptoWallet(email);
+		
 		BigDecimal currentCurrencyAmount = getCurrencyAmount(from, bankAccount);
+		BigDecimal exchangeRate;
+		BigDecimal totalToAdd;
+		Map<String, Object> backResponse = new HashMap<>();
 		
 		if(currentCurrencyAmount.compareTo(quantity) < 0) {
 			throw new CurrencyAmountException("You do not have enough currency for trade", from, currentCurrencyAmount);
 		}
+		
 		if(from.equalsIgnoreCase("USD") || from.equalsIgnoreCase("EUR")) {
-			return tradeUsdEurCrypto(from, to, quantity, bankAccount, cryptoWallet);
+			exchangeRate = repo.findByFromAndTo(from, to).getExchangeRate();
+			
+			if(from.equalsIgnoreCase("USD")) {
+				setCurrencyAmount(from, bankAccount, bankAccount.getUsdAmount().subtract(quantity));
+			} else {
+				setCurrencyAmount(from, bankAccount, bankAccount.getEurAmount().subtract(quantity));
+			}
+			
+			totalToAdd = quantity.multiply(exchangeRate);
+			setCryptoAmount(to, cryptoWallet, getCryptoAmount(to, cryptoWallet).add(totalToAdd));
+			
+			bankProxy.updateBankAccount(bankAccount);
+			walletProxy.updateCryptoWallet(cryptoWallet);
+			
+			backResponse.put("data", cryptoWallet);
+			backResponse.put("message", String.format("Successfully exchanged! %s %s --> %s %s", 
+					quantity, from, totalToAdd, to));
+			return ResponseEntity.status(HttpStatus.OK).body(backResponse);
 		} else {
-			tradeNotUsdEur(from, bankAccount, currentCurrencyAmount, quantity);
-			return tradeUsdEurCrypto("USD", to, quantity, bankAccount, cryptoWallet);
+			BigDecimal currencyExchangeRate = currencyProxy.getExchangeFeign(from, "USD").getBody().getExchangeRate();
+			BigDecimal baseQuantity = quantity;
+			quantity = quantity.multiply(currencyExchangeRate);
+			
+			exchangeRate = repo.findByFromAndTo("USD", to).getExchangeRate();
+			totalToAdd = quantity.multiply(exchangeRate);
+			
+			setCurrencyAmount(from, bankAccount, getCurrencyAmount(from, bankAccount).subtract(baseQuantity));
+			setCryptoAmount(to, cryptoWallet, getCryptoAmount(to, cryptoWallet).add(totalToAdd));
+			
+			bankProxy.updateBankAccount(bankAccount);
+			walletProxy.updateCryptoWallet(cryptoWallet);
+			
+			backResponse.put("data", cryptoWallet);
+			backResponse.put("message", String.format(String.format("Successfully exchanged! %s %s --> %s %s --> %s %s", 
+					baseQuantity, from, quantity, "USD", totalToAdd, to)));
+			return ResponseEntity.status(HttpStatus.OK).body(backResponse);
 		}
 	}
 	
-	private void tradeNotUsdEur(String from, BankAccountDto account, BigDecimal currentAmount, BigDecimal quantity) {
-		BigDecimal exchangeRate = currencyProxy.getExchangeFeign(from, "USD").getBody().getExchangeRate();
+	private ResponseEntity<?> tradeFromCryptoToFiat(String from, String to, BigDecimal quantity, String email) {
+		BankAccountDto bankAccount = bankProxy.getBankAccount(email);
+		CryptoWalletDto cryptoWallet = walletProxy.getCryptoWallet(email);
 		
-		setCurrencyAmount(from, account, currentAmount.subtract(quantity));
-		setCurrencyAmount("USD", account, getCurrencyAmount("USD", account).add(quantity.multiply(exchangeRate)));
-	}
-	
-	private ResponseEntity<?> tradeUsdEurCrypto(String from, String to, BigDecimal quantity, BankAccountDto bankAccount, CryptoWalletDto cryptoWallet) {
-		BigDecimal currentCurrencyAmount = getCurrencyAmount(from, bankAccount);
-		BigDecimal currentCryptoAmount = getCryptoAmount(to, cryptoWallet);
-		BigDecimal exchangeRate = repo.findByFromAndTo(from, to).getExchangeRate();
-		
-		setCurrencyAmount(from, bankAccount, currentCurrencyAmount.subtract(quantity));
-		bankProxy.updateBankAccount(bankAccount);
-		
-		setCryptoAmount(to, cryptoWallet, currentCryptoAmount.add(quantity.multiply(exchangeRate)));
-		walletProxy.updateCryptoWallet(cryptoWallet);
-		
+		BigDecimal currentCryptoAmount = getCryptoAmount(from, cryptoWallet);
+		BigDecimal exchangeRate;
+		BigDecimal totalToAdd;
 		Map<String, Object> backResponse = new HashMap<>();
-		backResponse.put("data", cryptoWallet);
-		backResponse.put("message", "Conversion successful! " + from + ": " + quantity + " -> " + to + " " + quantity.multiply(exchangeRate));
-		//backResponse.put("message", "Conversion successful! " + from + ": " + quantity + " -> " + to + " " + currentCryptoAmount);
-		return ResponseEntity.status(HttpStatus.OK).body(backResponse);
+		
+		if(currentCryptoAmount.compareTo(quantity) < 0) {
+			throw new CryptoAmountException("You do not have enough crypto for trade", from, currentCryptoAmount);
+		}
+		
+		if(to.equalsIgnoreCase("USD") || to.equalsIgnoreCase("EUR")) {
+			exchangeRate = repo.findByFromAndTo(from, to).getExchangeRate();
+			totalToAdd = quantity.multiply(exchangeRate);
+			
+			if(to.equalsIgnoreCase("USD")) {
+				setCurrencyAmount(to, bankAccount, bankAccount.getUsdAmount().add(totalToAdd));
+			} else {
+				setCurrencyAmount(to, bankAccount, bankAccount.getEurAmount().add(totalToAdd));
+			}
+			
+			setCryptoAmount(from, cryptoWallet, getCryptoAmount(from, cryptoWallet).subtract(quantity));
+			
+			bankProxy.updateBankAccount(bankAccount);
+			walletProxy.updateCryptoWallet(cryptoWallet);
+			
+			backResponse.put("data", bankAccount);
+			backResponse.put("message", String.format("Successfully exchanged! %s %s --> %s %s", 
+					quantity, from, totalToAdd, to));
+			return ResponseEntity.status(HttpStatus.OK).body(backResponse);
+		} else {
+			BigDecimal currencyExchangeRate = currencyProxy.getExchangeFeign("USD", to).getBody().getExchangeRate();
+			BigDecimal baseQuantity = quantity;
+			quantity = quantity.multiply(currencyExchangeRate);
+			
+			exchangeRate = repo.findByFromAndTo(from, "USD").getExchangeRate();
+			totalToAdd = quantity.multiply(exchangeRate);
+			
+			setCurrencyAmount(to, bankAccount, getCurrencyAmount(to, bankAccount).add(totalToAdd));
+			setCryptoAmount(from, cryptoWallet, getCryptoAmount(from, cryptoWallet).subtract(baseQuantity));
+			
+			bankProxy.updateBankAccount(bankAccount);
+			walletProxy.updateCryptoWallet(cryptoWallet);
+			
+			backResponse.put("data", bankAccount);
+			backResponse.put("message", String.format(String.format("Successfully exchanged! %s %s --> %s %s --> %s %s", 
+					baseQuantity, from, baseQuantity.multiply(exchangeRate), "USD", totalToAdd, to)));
+			return ResponseEntity.status(HttpStatus.OK).body(backResponse);
+		}
 	}
 	
 	private void setCryptoAmount(String crypto, CryptoWalletDto wallet, BigDecimal quantity) {
