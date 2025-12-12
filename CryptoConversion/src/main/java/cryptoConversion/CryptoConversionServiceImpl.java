@@ -17,6 +17,8 @@ import api.dtos.CryptoWalletDto;
 import api.proxies.CryptoExchangeProxy;
 import api.proxies.CryptoWalletProxy;
 import api.services.CryptoConversionService;
+import io.github.resilience4j.retry.Retry;
+import io.github.resilience4j.retry.RetryRegistry;
 import util.exceptions.CryptoAmountException;
 import util.exceptions.CryptoDoesNotExistException;
 import util.exceptions.InvalidQuantityException;
@@ -30,6 +32,12 @@ public class CryptoConversionServiceImpl implements CryptoConversionService{
 	@Autowired
 	private CryptoWalletProxy walletProxy;
 	
+	Retry retry;
+	
+	public CryptoConversionServiceImpl(RetryRegistry registry) {
+		retry=registry.retry("default");
+	}
+	
 	@Override
 	public ResponseEntity<?> getConversionFeign(String from, String to, BigDecimal quantity, String email) {
 		if (quantity.compareTo(BigDecimal.ZERO) < 0) {
@@ -42,10 +50,10 @@ public class CryptoConversionServiceImpl implements CryptoConversionService{
 			throw new InvalidQuantityException(String.format("Quantity of %s is too large", quantity));
 		}
 		checkCryptoExists(from, to);
-		CryptoWalletDto wallet = walletProxy.getCryptoWallet(email);
+		CryptoWalletDto wallet = retry.executeSupplier(() -> walletProxy.getCryptoWallet(email));
 		System.out.println(wallet);
 		if(checkCryptoAmount(quantity, wallet, from)) {
-			CryptoExchangeDto response = proxy.getExchangeFeign(from, to).getBody();
+			CryptoExchangeDto response = retry.executeSupplier(() -> proxy.getExchangeFeign(from, to)).getBody();
 			CryptoConversionDto dto = new CryptoConversionDto(response, quantity);
 			BigDecimal convertedAmount = dto.getConversionResault().getConvertedAmount();
 			

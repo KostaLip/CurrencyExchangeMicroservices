@@ -29,6 +29,7 @@
 	<properties>
 		<java.version>17</java.version>
 		<spring-cloud.version>2025.0.0</spring-cloud.version>
+		<resilience4j.version>2.2.0</resilience4j.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -63,7 +64,17 @@
 		</dependency>
 		<dependency>
 		    <groupId>org.springframework</groupId>
-    			<artifactId>spring-tx</artifactId>
+    		<artifactId>spring-tx</artifactId>
+		</dependency>
+		<!-- PROMENJENA VERZIJA ZA SPRING BOOT 3 -->
+		<dependency>
+		    <groupId>io.github.resilience4j</groupId>
+		    <artifactId>resilience4j-spring-boot3</artifactId>
+		    <version>${resilience4j.version}</version>
+		</dependency>
+		<dependency>
+		    <groupId>org.springframework.boot</groupId>
+		    <artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
 	</dependencies>
 	<dependencyManagement>
