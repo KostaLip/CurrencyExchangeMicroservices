@@ -17,10 +17,10 @@ API Gateway (8765)
   ├── user-service (8770)
   ├── bank-account (8200)
   ├── currency-exchange (8000)
-  ├── currency-conversion (8100)  ──Feign──▶ currency-exchange
+  ├── currency-conversion (8100)
   ├── crypto-exchange (8400)
   ├── crypto-wallet (8300)
-  ├── crypto-conversion (8500)    ──Feign──▶ crypto-exchange
+  ├── crypto-conversion (8500)
   └── trade-service (8600)
   
 Naming Server ── service registry/discovery for all of the above
